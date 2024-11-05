@@ -1,45 +1,31 @@
-#include <Windows.h>
-#include <string>
-#include <memory>
-#include <vector>
+local debug = {}
 
-namespace debuglibs {
-    struct DebugFunctions {
-        void* getupvalue;
-        void* getupvalues;
-        void* setconstant;
-        void* setstack;
-        void* setupvalue;
-        void* hookmetamethod;
-    };
+function debug.getupvalue(func)
+    local upvalues = {}
+    local i = 1
+    while true do
+        local name, value = getupvalue(func, i)
+        if not name then break end
+        upvalues[name] = value
+        i = i + 1
+    end
+    return upvalues
+end
 
-    DWORD WINAPI SetupDebugFunctions(LPVOID) {
-        HMODULE robloxModule = GetModuleHandleW(L"RobloxPlayerBeta.exe");
-        if (!robloxModule) return 0;
+function debug.setconstant(func, idx, value)
+    return setconstant(func, idx, value)
+end
 
-        DebugFunctions dbg;
-        dbg.getupvalue = GetProcAddress(robloxModule, "lua_getupvalue");
-        dbg.getupvalues = GetProcAddress(robloxModule, "lua_getupvalues");
-        dbg.setconstant = GetProcAddress(robloxModule, "lua_setconstant");
-        dbg.setstack = GetProcAddress(robloxModule, "lua_setstack");
-        dbg.setupvalue = GetProcAddress(robloxModule, "lua_setupvalue");
-        dbg.hookmetamethod = GetProcAddress(robloxModule, "lua_hookmetamethod");
+function debug.setupvalue(func, idx, value)
+    return setupvalue(func, idx, value)
+end
 
-        DWORD oldProtect;
-        VirtualProtect((LPVOID)robloxModule, 0x1000, PAGE_EXECUTE_READWRITE, &oldProtect);
+function debug.setstack(thread, idx, value)
+    return setstack(thread, idx, value)
+end
 
-        memcpy((void*)((uintptr_t)robloxModule + 0x1000), &dbg, sizeof(DebugFunctions));
+function debug.hookmetamethod(object, method, hook)
+    return hookmetamethod(object, method, hook)
+end
 
-        VirtualProtect((LPVOID)robloxModule, 0x1000, oldProtect, &oldProtect);
-        
-        return 0;
-    }
-
-    BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved) {
-        if (reason == DLL_PROCESS_ATTACH) {
-            DisableThreadLibraryCalls(hModule);
-            CreateThread(0, 0, SetupDebugFunctions, 0, 0, 0);
-        }
-        return TRUE;
-    }
-}
+return debug
